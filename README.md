@@ -1,100 +1,89 @@
-# vinext-starter
+# Model Atlas
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+Model Atlas is an interactive, evidence-led guide for choosing and comparing AI
+models. Describe a use case, select the capabilities that matter, and the app
+ranks suitable models with its reasoning and links to supporting sources.
 
-## Prerequisites
+## Features
+
+- Natural-language model recommendations across medical, software,
+  construction, research, finance, legal, creative, and other domains
+- Adjustable priorities for privacy, vision, long context, cost, and
+  multilingual use
+- Side-by-side model comparison with capability, access, context, limitation,
+  and evidence fields
+- Curated model catalog with provider, API, and open-weight links
+- Safety notes for higher-risk domains
+- Responsive single-page interface
+
+## Project structure
+
+```text
+app/
+├── layout.tsx                    # Root metadata and application shell
+├── page.tsx                      # Route entry point
+├── globals.css                   # Global design system and responsive styles
+└── model-atlas/
+    ├── ModelAtlas.tsx            # Interactive client UI and state
+    ├── catalog.ts                # Model catalog and cited evidence
+    ├── domains.ts                # Domain, preset, and caution content
+    ├── recommendation.ts         # Pure inference and ranking functions
+    └── types.ts                  # Shared domain types
+tests/
+└── rendered-html.test.mjs        # Production-render smoke test
+```
+
+The application keeps editorial data, recommendation logic, shared types, and
+interactive presentation separate. This makes catalog updates reviewable and
+keeps ranking behavior independently testable.
+
+## Local development
+
+### Prerequisites
 
 - Node.js `>=22.13.0`
-
-## Quick Start
+- npm
 
 ```bash
-npm install
+npm ci
 npm run dev
-npm run build
 ```
 
-This starter does not use `wrangler.jsonc`.
+Then open the local URL printed by vinext.
 
-## Included Shape
+## Quality checks
 
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
-
-## Workspace Auth Headers
-
-Signed-in visitors receive both `oai-authenticated-user-id` and `oai-authenticated-user-email`. Private Sites require every visitor to sign in; public Sites may also have anonymous visitors, for whom neither header is present.
-
-The user ID is stable for the same user on the same Site and different across Sites. Email and name are intended for display or contact purposes.
-
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
-
-Treat the full name as optional and fall back to email when it is absent:
-
-```tsx
-import { headers } from "next/headers";
-
-export default async function Home() {
-  const requestHeaders = await headers();
-  const userId = requestHeaders.get("oai-authenticated-user-id");
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
+```bash
+npm run format:check
+npm run lint
+npm test
 ```
 
-## Optional Dispatch-Owned ChatGPT Sign-In
+`npm test` creates a production build and verifies the rendered application
+shell.
 
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
+## Recommendation methodology
 
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
+Recommendations combine four signals:
 
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
+1. A curated domain-fit score
+2. Keywords found in the use-case description
+3. User-selected priorities
+4. Model characteristics such as access method, modality, and context window
 
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
+Scores are comparative product guidance, not clinical, legal, financial, or
+regulatory validation. Evidence links should be reviewed before a model is used
+in a consequential workflow.
 
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
+## Updating the catalog
 
-## Useful Commands
+Add or revise models in `app/model-atlas/catalog.ts`, using the `Model` contract
+from `app/model-atlas/types.ts`. Each factual capability claim should include a
+first-party source when available. Update domain metadata in
+`app/model-atlas/domains.ts` and ranking rules in
+`app/model-atlas/recommendation.ts`.
 
-- `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
-- `npm test`: build the starter and verify its rendered loading skeleton
-- `npm run db:generate`: generate Drizzle migrations after schema changes
+## Deployment
 
-## Learn More
-
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+The project is configured for OpenAI Sites through `.openai/hosting.json` and
+builds on vinext/Cloudflare. Run `npm run build` before publishing.
