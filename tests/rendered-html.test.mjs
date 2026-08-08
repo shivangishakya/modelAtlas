@@ -1,30 +1,66 @@
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
-import test from "node:test";
+import { after, before, test } from "node:test";
 
-async function render() {
-  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
-  const { default: worker } = await import(workerUrl.href);
+const host = "127.0.0.1";
+const port = 3_200 + (process.pid % 500);
+const baseUrl = `http://${host}:${port}`;
+let server;
+let serverOutput = "";
 
-  return worker.fetch(
-    new Request("http://localhost/", {
-      headers: { accept: "text/html" },
-    }),
-    {
-      ASSETS: {
-        fetch: async () => new Response("Not found", { status: 404 }),
-      },
-    },
-    {
-      waitUntil() {},
-      passThroughOnException() {},
-    },
-  );
+async function waitForServer() {
+  const deadline = Date.now() + 20_000;
+
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(baseUrl);
+      if (response.ok) {
+        return;
+      }
+    } catch {
+      // The server is still starting.
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+
+  throw new Error(`Next.js did not start in time.\n${serverOutput}`);
 }
 
-test("server-renders the Model Atlas application", async () => {
-  const response = await render();
+before(async () => {
+  server = spawn(
+    process.execPath,
+    [
+      "node_modules/next/dist/bin/next",
+      "start",
+      "--hostname",
+      host,
+      "--port",
+      String(port),
+    ],
+    {
+      cwd: new URL("../", import.meta.url),
+      env: { ...process.env, NODE_ENV: "production" },
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
+  server.stdout.on("data", (chunk) => {
+    serverOutput += chunk.toString();
+  });
+  server.stderr.on("data", (chunk) => {
+    serverOutput += chunk.toString();
+  });
+
+  await waitForServer();
+});
+
+after(() => {
+  server?.kill("SIGTERM");
+});
+
+test("serves the production Model Atlas application", async () => {
+  const response = await fetch(baseUrl);
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
@@ -78,5 +114,6 @@ test("keeps data, ranking logic, types, and presentation separated", async () =>
   assert.match(types, /export interface Model/);
   assert.match(types, /export interface Recommendation/);
   assert.match(packageJson, /"name": "model-atlas"/);
-  assert.doesNotMatch(packageJson, /site-creator-vinext-starter/);
+  assert.match(packageJson, /"next": "16\.3\.0"/);
+  assert.doesNotMatch(packageJson, /vinext|wrangler/);
 });

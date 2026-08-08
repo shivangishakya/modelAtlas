@@ -49,7 +49,7 @@ npm ci
 npm run dev
 ```
 
-Then open the local URL printed by vinext.
+Then open the local URL printed by Next.js.
 
 ## Quality checks
 
@@ -59,8 +59,8 @@ npm run lint
 npm test
 ```
 
-`npm test` creates a production build and verifies the rendered application
-shell.
+`npm test` creates a production build, starts it locally, and verifies the
+rendered application.
 
 ## Recommendation methodology
 
@@ -85,5 +85,14 @@ first-party source when available. Update domain metadata in
 
 ## Deployment
 
-The project is configured for OpenAI Sites through `.openai/hosting.json` and
-builds on vinext/Cloudflare. Run `npm run build` before publishing.
+The project is deployed on Vercel as a public Next.js application.
+
+- Pull requests and pushes run formatting, lint, build, and production-render
+  checks through GitHub Actions.
+- Vercel creates preview deployments for branches and automatically promotes
+  successful `main` deployments to production through its Git integration.
+- No application authentication or deployment password is required to visit the
+  production URL.
+
+Vercel configuration lives in `vercel.json`, and the CI definition lives in
+`.github/workflows/ci.yml`.
