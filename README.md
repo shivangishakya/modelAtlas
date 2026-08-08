@@ -4,6 +4,14 @@ Model Atlas is an interactive, evidence-led guide for choosing and comparing AI
 models. Describe a use case, select the capabilities that matter, and the app
 ranks suitable models with its reasoning and links to supporting sources.
 
+[![CI/CD](https://github.com/shivangishakya/modelAtlas/actions/workflows/ci.yml/badge.svg)](https://github.com/shivangishakya/modelAtlas/actions/workflows/ci.yml)
+
+## Links
+
+- [Live application](https://model-atlas-mu.vercel.app)
+- [GitHub repository](https://github.com/shivangishakya/modelAtlas)
+- [CI/CD workflow](https://github.com/shivangishakya/modelAtlas/actions/workflows/ci.yml)
+
 ## Features
 
 - Natural-language model recommendations across medical, software,
@@ -85,7 +93,9 @@ first-party source when available. Update domain metadata in
 
 ## Deployment
 
-The project is deployed on Vercel as a public Next.js application.
+The project is deployed at
+[model-atlas-mu.vercel.app](https://model-atlas-mu.vercel.app) as a public
+Next.js application.
 
 - Pull requests and pushes run formatting, lint, build, and production-render
   checks through GitHub Actions.
