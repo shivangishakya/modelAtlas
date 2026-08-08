@@ -89,8 +89,9 @@ The project is deployed on Vercel as a public Next.js application.
 
 - Pull requests and pushes run formatting, lint, build, and production-render
   checks through GitHub Actions.
-- Vercel creates preview deployments for branches and automatically promotes
-  successful `main` deployments to production through its Git integration.
+- After the validation job succeeds on `main`, GitHub Actions builds a pinned
+  Vercel artifact and deploys it to production using encrypted repository
+  secrets.
 - No application authentication or deployment password is required to visit the
   production URL.
 
