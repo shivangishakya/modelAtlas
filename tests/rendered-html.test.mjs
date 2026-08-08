@@ -74,12 +74,29 @@ test("serves the production Model Atlas application", async () => {
   assert.doesNotMatch(html, /codex-preview|Building your site/);
 });
 
-test("keeps data, ranking logic, types, and presentation separated", async () => {
+test("validates advisor input before making an AI request", async () => {
+  const response = await fetch(`${baseUrl}/api/advisor`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ description: "too short", priorities: [] }),
+  });
+
+  assert.equal(response.status, 400);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.deepEqual(await response.json(), {
+    error:
+      "Describe the work in 20–2,000 characters and use only the listed priorities.",
+  });
+});
+
+test("keeps data, AI analysis, types, and presentation separated", async () => {
   const [
     page,
     component,
     catalog,
     domains,
+    advisor,
+    advisorRoute,
     recommendation,
     types,
     packageJson,
@@ -91,6 +108,8 @@ test("keeps data, ranking logic, types, and presentation separated", async () =>
     ),
     readFile(new URL("../app/model-atlas/catalog.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/model-atlas/domains.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/model-atlas/advisor.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/advisor/route.ts", import.meta.url), "utf8"),
     readFile(
       new URL("../app/model-atlas/recommendation.ts", import.meta.url),
       "utf8",
@@ -105,15 +124,25 @@ test("keeps data, ranking logic, types, and presentation separated", async () =>
   assert.match(component, /from "\.\/catalog"/);
   assert.match(component, /from "\.\/domains"/);
   assert.match(component, /from "\.\/recommendation"/);
+  assert.match(component, /fetch\("\/api\/advisor"/);
+  assert.doesNotMatch(component, /getRecommendations|matchedKeywords/);
   assert.doesNotMatch(component, /const models\s*=/);
   assert.match(catalog, /export const models: readonly Model\[\]/);
   assert.match(domains, /export const domains: readonly Domain\[\]/);
-  assert.match(recommendation, /export function inferDomain/);
-  assert.match(recommendation, /export function getRecommendations/);
+  assert.match(advisor, /import "server-only"/);
+  assert.match(advisor, /model: ADVISOR_MODEL_ID/);
+  assert.match(advisor, /Output\.object/);
+  assert.match(advisor, /assertValidOutput/);
+  assert.match(advisorRoute, /advisorRequestSchema\.safeParse/);
+  assert.match(advisorRoute, /Cache-Control": "no-store"/);
+  assert.doesNotMatch(recommendation, /inferDomain|getRecommendations/);
   assert.doesNotMatch(recommendation, /"use client"/);
   assert.match(types, /export interface Model/);
+  assert.match(types, /export interface AdvisorResponse/);
   assert.match(types, /export interface Recommendation/);
   assert.match(packageJson, /"name": "model-atlas"/);
+  assert.match(packageJson, /"ai":/);
+  assert.match(packageJson, /"zod":/);
   assert.match(packageJson, /"next": "16\.3\.0"/);
   assert.doesNotMatch(packageJson, /vinext|wrangler/);
 });

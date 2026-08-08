@@ -948,6 +948,15 @@ footer a {
 .analyze span {
   color: var(--lime);
 }
+.analyze[aria-busy="true"] span {
+  animation: advisor-pulse 0.8s ease-in-out infinite alternate;
+}
+@keyframes advisor-pulse {
+  to {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+}
 .analyze:disabled {
   opacity: 0.35;
   cursor: not-allowed;
@@ -956,6 +965,16 @@ footer a {
   text-align: center;
   font-size: 9px;
   color: var(--muted);
+}
+.advisor-error {
+  border: 1px solid #b5422c;
+  border-top: 0;
+  background: #ffdfd6;
+  color: #762311;
+  margin: 0;
+  padding: 16px 24px;
+  font-size: 12px;
+  line-height: 1.5;
 }
 .recommendation {
   border: 1px solid var(--ink);
@@ -1029,6 +1048,20 @@ footer a {
   padding-left: 18px;
   line-height: 1.7;
   font-family: Georgia, serif;
+  color: #d4dad5;
+}
+.rec-why .tradeoff-list {
+  color: #ffcbbf;
+  margin-bottom: 18px;
+}
+.rec-assumptions {
+  border-left: 2px solid #78857d;
+  color: #aab4ad;
+  font-size: 10px;
+  line-height: 1.55;
+  padding-left: 12px;
+}
+.rec-assumptions b {
   color: #d4dad5;
 }
 .proof-strip {

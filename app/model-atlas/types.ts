@@ -48,5 +48,16 @@ export interface Recommendation {
   model: Model;
   score: number;
   reasons: string[];
+  tradeoffs: string[];
+}
+
+export type AdvisorConfidence = "high" | "medium" | "low";
+
+export interface AdvisorResponse {
+  taskSummary: string;
   inferredDomain: string;
+  confidence: AdvisorConfidence;
+  assumptions: string[];
+  recommendations: Recommendation[];
+  analysisModel: string;
 }

@@ -2,7 +2,8 @@
 
 Model Atlas is an interactive, evidence-led guide for choosing and comparing AI
 models. Describe a use case, select the capabilities that matter, and the app
-ranks suitable models with its reasoning and links to supporting sources.
+uses an LLM to rank suitable catalog models with its reasoning, limitations and
+links to supporting sources.
 
 [![CI/CD](https://github.com/shivangishakya/modelAtlas/actions/workflows/ci.yml/badge.svg)](https://github.com/shivangishakya/modelAtlas/actions/workflows/ci.yml)
 
@@ -14,8 +15,9 @@ ranks suitable models with its reasoning and links to supporting sources.
 
 ## Features
 
-- Natural-language model recommendations across medical, software,
-  construction, research, finance, legal, creative, and other domains
+- LLM-backed semantic recommendations across medical, software, construction,
+  research, finance, legal, creative, and other domains
+- Schema-validated rankings restricted to models and evidence in the catalog
 - Adjustable priorities for privacy, vision, long context, cost, and
   multilingual use
 - Side-by-side model comparison with capability, access, context, limitation,
@@ -28,22 +30,24 @@ ranks suitable models with its reasoning and links to supporting sources.
 
 ```text
 app/
+├── api/advisor/route.ts          # Validated, rate-limited advisor endpoint
 ├── layout.tsx                    # Root metadata and application shell
 ├── page.tsx                      # Route entry point
 ├── globals.css                   # Global design system and responsive styles
 └── model-atlas/
     ├── ModelAtlas.tsx            # Interactive client UI and state
+    ├── advisor.ts                 # Server-only LLM prompt and output validation
     ├── catalog.ts                # Model catalog and cited evidence
     ├── domains.ts                # Domain, preset, and caution content
-    ├── recommendation.ts         # Pure inference and ranking functions
+    ├── recommendation.ts         # Editorial domain-map scoring
     └── types.ts                  # Shared domain types
 tests/
 └── rendered-html.test.mjs        # Production-render smoke test
 ```
 
-The application keeps editorial data, recommendation logic, shared types, and
-interactive presentation separate. This makes catalog updates reviewable and
-keeps ranking behavior independently testable.
+The application keeps editorial data, server-side semantic analysis, shared
+types, and interactive presentation separate. User text and AI Gateway
+credentials are never placed in the client bundle.
 
 ## Local development
 
@@ -54,10 +58,13 @@ keeps ranking behavior independently testable.
 
 ```bash
 npm ci
+npx vercel env pull .env.local --yes
 npm run dev
 ```
 
-Then open the local URL printed by Next.js.
+The Vercel environment pull supplies the short-lived OIDC credential used by AI
+Gateway. Alternatively, set `AI_GATEWAY_API_KEY` in `.env.local`. Then open the
+local URL printed by Next.js.
 
 ## Quality checks
 
@@ -72,23 +79,32 @@ rendered application.
 
 ## Recommendation methodology
 
-Recommendations combine four signals:
+The advisor uses a server-side LLM rather than substring or keyword matching:
 
-1. A curated domain-fit score
-2. Keywords found in the use-case description
-3. User-selected priorities
-4. Model characteristics such as access method, modality, and context window
+1. GPT-5.6 Sol analyzes the complete task, inputs, output, constraints and
+   ambiguity through Vercel AI Gateway.
+2. The prompt supplies only the reviewed Model Atlas catalog and requires three
+   distinct catalog model IDs.
+3. A Zod schema validates the domain, confidence, scores, reasons and tradeoffs;
+   server checks reject duplicates and out-of-range or oversized output.
+4. The UI joins the selected IDs back to deterministic catalog records and
+   first-party evidence links.
 
-Scores are comparative product guidance, not clinical, legal, financial, or
-regulatory validation. Evidence links should be reviewed before a model is used
-in a consequential workflow.
+Semantic analysis improves intent matching but cannot guarantee a correct
+recommendation. Scores are comparative product guidance, not benchmark,
+clinical, legal, financial, or regulatory validation. Review evidence links and
+run task-specific evaluations before consequential use.
+
+The use-case description is sent to the configured AI model for analysis. Do
+not submit personal, privileged, regulated, or confidential information.
 
 ## Updating the catalog
 
 Add or revise models in `app/model-atlas/catalog.ts`, using the `Model` contract
 from `app/model-atlas/types.ts`. Each factual capability claim should include a
 first-party source when available. Update domain metadata in
-`app/model-atlas/domains.ts` and ranking rules in
+`app/model-atlas/domains.ts`, semantic selection policy in
+`app/model-atlas/advisor.ts`, and domain-map ranking rules in
 `app/model-atlas/recommendation.ts`.
 
 ## Deployment
@@ -104,6 +120,8 @@ Next.js application.
   secrets.
 - No application authentication or deployment password is required to visit the
   production URL.
+- The advisor authenticates server-to-server with Vercel OIDC; no provider key
+  is exposed to visitors.
 
 Vercel configuration lives in `vercel.json`, and the CI definition lives in
 `.github/workflows/ci.yml`.

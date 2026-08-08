@@ -3,7 +3,14 @@
 import { useMemo, useState } from "react";
 import { independent, models } from "./catalog";
 import { caution, domains, presets, priorityDefs } from "./domains";
-import { getRecommendations, scoreFor } from "./recommendation";
+import { scoreFor } from "./recommendation";
+import type { AdvisorResponse } from "./types";
+
+const confidenceLabels: Record<AdvisorResponse["confidence"], string> = {
+  high: "High confidence",
+  medium: "Medium confidence",
+  low: "Low confidence",
+};
 
 export default function ModelAtlas() {
   const [domain, setDomain] = useState("medical");
@@ -16,9 +23,9 @@ export default function ModelAtlas() {
   ]);
   const [useText, setUseText] = useState("");
   const [priorities, setPriorities] = useState<string[]>([]);
-  const [results, setResults] = useState<ReturnType<
-    typeof getRecommendations
-  > | null>(null);
+  const [results, setResults] = useState<AdvisorResponse | null>(null);
+  const [advisorError, setAdvisorError] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const current = domains.find((d) => d.id === domain)!;
   const ranked = useMemo(
     () => [...models].sort((a, b) => scoreFor(b, domain) - scoreFor(a, domain)),
@@ -39,16 +46,49 @@ export default function ModelAtlas() {
           ? [...s, id]
           : s,
     );
-  const runAdvisor = () => {
-    if (useText.trim().length < 8) return;
-    setResults(getRecommendations(useText, priorities));
-    setTimeout(
-      () =>
-        document
-          .getElementById("recommendation")
-          ?.scrollIntoView({ behavior: "smooth", block: "center" }),
-      50,
-    );
+  const runAdvisor = async () => {
+    const description = useText.trim();
+    if (description.length < 20 || isAnalyzing) return;
+
+    setIsAnalyzing(true);
+    setAdvisorError("");
+    setResults(null);
+
+    try {
+      const response = await fetch("/api/advisor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description, priorities }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as
+        | AdvisorResponse
+        | { error?: string };
+
+      if (!response.ok) {
+        throw new Error(
+          "error" in payload && payload.error
+            ? payload.error
+            : "The AI advisor could not complete the analysis.",
+        );
+      }
+
+      setResults(payload as AdvisorResponse);
+      window.setTimeout(
+        () =>
+          document
+            .getElementById("recommendation")
+            ?.scrollIntoView({ behavior: "smooth", block: "center" }),
+        50,
+      );
+    } catch (error) {
+      setAdvisorError(
+        error instanceof Error
+          ? error.message
+          : "The AI advisor is temporarily unavailable.",
+      );
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
   return (
     <main>
@@ -122,8 +162,8 @@ export default function ModelAtlas() {
             </h2>
           </div>
           <p>
-            The advisor detects task, input type and deployment constraints. Its
-            score combines task fit, matched signals and your priorities—then
+            An LLM analyzes the full meaning of your task, inputs, outputs and
+            constraints. It ranks only catalog models, validates the result and
             shows the evidence behind the recommendation.
           </p>
         </div>
@@ -134,6 +174,7 @@ export default function ModelAtlas() {
               id="usecase"
               value={useText}
               onChange={(e) => setUseText(e.target.value)}
+              maxLength={2_000}
               placeholder="Example: I need to compare architectural drawings against a 300-page specification, identify conflicts, and draft RFIs. The documents are confidential…"
             />
             <div className="charhint">
@@ -171,71 +212,92 @@ export default function ModelAtlas() {
             </div>
             <button
               className="analyze"
-              disabled={useText.trim().length < 8}
+              disabled={useText.trim().length < 20 || isAnalyzing}
               onClick={runAdvisor}
+              aria-busy={isAnalyzing}
             >
-              Analyze my use case <span>→</span>
+              {isAnalyzing
+                ? "Reasoning over your use case…"
+                : "Analyze with AI"}{" "}
+              <span>{isAnalyzing ? "◌" : "→"}</span>
             </button>
             <p>
-              Runs locally in your browser. Your description is not sent
-              anywhere.
+              Your description is sent to GPT-5.6 Sol for analysis. Avoid
+              personal, privileged or confidential data.
             </p>
           </div>
         </div>
+        {advisorError && (
+          <p className="advisor-error" role="alert">
+            <b>Advisor unavailable.</b> {advisorError}
+          </p>
+        )}
         {results && (
           <div id="recommendation" className="recommendation">
             <div className="rec-head">
               <div>
                 <span>RECOMMENDATION</span>
-                <h3>{results[0].model.name}</h3>
+                <h3>{results.recommendations[0].model.name}</h3>
                 <p>
-                  Best fit for your described{" "}
+                  {results.taskSummary} ·{" "}
                   <b>
-                    {domains
-                      .find((d) => d.id === results[0].inferredDomain)
-                      ?.name.toLowerCase()}
-                  </b>{" "}
-                  workflow.
+                    {domains.find((d) => d.id === results.inferredDomain)?.name}
+                  </b>
                 </p>
               </div>
               <div className="confidence">
-                <b>{useText.length > 55 ? "Strong signal" : "Directional"}</b>
-                <span>recommendation confidence</span>
+                <b>{confidenceLabels[results.confidence]}</b>
+                <span>AI-assessed confidence · {results.analysisModel}</span>
               </div>
             </div>
             <div className="rec-body">
               <div className="rec-rank">
-                <div className={`big-mark ${results[0].model.tone}`}>
-                  {results[0].model.mark}
+                <div
+                  className={`big-mark ${results.recommendations[0].model.tone}`}
+                >
+                  {results.recommendations[0].model.mark}
                 </div>
-                <b>{results[0].score}</b>
+                <b>{results.recommendations[0].score}</b>
                 <span>FIT SCORE</span>
               </div>
               <div className="rec-why">
                 <span>WHY IT RANKED FIRST</span>
                 <ul>
-                  {results[0].reasons.map((x) => (
+                  {results.recommendations[0].reasons.map((x) => (
                     <li key={x}>{x}</li>
                   ))}
                 </ul>
-                <div className="proof-strip">
-                  {results[0].model.proofs.slice(0, 2).map((p) => (
-                    <a
-                      key={p.label}
-                      href={p.url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <b>{p.value}</b>
-                      <span>{p.label}</span>
-                      <small>{p.source} ↗</small>
-                    </a>
+                <span>TRADEOFFS TO REVIEW</span>
+                <ul className="tradeoff-list">
+                  {results.recommendations[0].tradeoffs.map((tradeoff) => (
+                    <li key={tradeoff}>{tradeoff}</li>
                   ))}
+                </ul>
+                {results.assumptions.length > 0 && (
+                  <p className="rec-assumptions">
+                    <b>Assumptions:</b> {results.assumptions.join(" · ")}
+                  </p>
+                )}
+                <div className="proof-strip">
+                  {results.recommendations[0].model.proofs
+                    .slice(0, 2)
+                    .map((p) => (
+                      <a
+                        key={p.label}
+                        href={p.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <b>{p.value}</b>
+                        <span>{p.label}</span>
+                        <small>{p.source} ↗</small>
+                      </a>
+                    ))}
                 </div>
               </div>
               <div className="rec-next">
                 <span>RUNNERS-UP</span>
-                {results.slice(1, 3).map((r, i) => (
+                {results.recommendations.slice(1, 3).map((r, i) => (
                   <button
                     key={r.model.id}
                     onClick={() => {
@@ -258,8 +320,8 @@ export default function ModelAtlas() {
               </div>
             </div>
             <div className="rec-warning">
-              <b>Important limitation</b>
-              <span>{caution[results[0].inferredDomain]}</span>
+              <b>AI guidance—not a guarantee</b>
+              <span>{caution[results.inferredDomain]}</span>
             </div>
           </div>
         )}
