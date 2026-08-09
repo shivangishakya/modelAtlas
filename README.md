@@ -82,11 +82,11 @@ rendered application.
 The advisor uses a server-side LLM rather than substring or keyword matching:
 
 1. Gemini 3.6 Flash analyzes the complete task, inputs, output, constraints and
-   ambiguity with high reasoning depth.
+   ambiguity with medium reasoning depth for reliable free-hosted latency.
 2. The prompt supplies only the reviewed Model Atlas catalog and requires three
    distinct catalog model IDs.
 3. A Zod schema validates the domain, confidence, scores, reasons and tradeoffs;
-   server checks reject duplicates and out-of-range or oversized output.
+   server checks reject duplicates and normalize bounded display text.
 4. The UI joins the selected IDs back to deterministic catalog records and
    first-party evidence links.
 
@@ -106,6 +106,18 @@ first-party source when available. Update domain metadata in
 `app/model-atlas/domains.ts`, semantic selection policy in
 `app/model-atlas/advisor.ts`, and domain-map ranking rules in
 `app/model-atlas/recommendation.ts`.
+
+The `Weekly model catalog update` GitHub Actions workflow also checks official
+provider sources every Monday from a GitHub-hosted runner, so the laptop does
+not need to be on. Gemini runs in a read-only research job with no deployment
+credentials and may modify only `app/model-atlas/catalog.ts`. A separate job
+accepts only a literal-data catalog patch, reruns all checks, commits as Shivangi
+Shakya, and deploys the validated result through Vercel. Manual runs are dry by
+default; scheduled runs publish only when a verified catalog change exists.
+
+The workflow requires the Google AI Studio key in the encrypted repository
+secret `GEMINI_API_KEY`. Its validation script is available through
+`npm run catalog:validate`.
 
 ## Deployment
 
@@ -127,4 +139,5 @@ Next.js application.
   Google products. The UI warns visitors not to submit sensitive information.
 
 Vercel configuration lives in `vercel.json`, and the CI definition lives in
-`.github/workflows/ci.yml`.
+`.github/workflows/ci.yml`. Cloud catalog maintenance is defined in
+`.github/workflows/weekly-model-update.yml`.

@@ -7,13 +7,14 @@
     "node": ">=22.13.0"
   },
   "scripts": {
+    "catalog:validate": "node scripts/validate-model-catalog.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "npm run build && node --test tests/rendered-html.test.mjs",
+    "test": "npm run catalog:validate && npm run build && node --test tests/rendered-html.test.mjs",
     "lint": "eslint .",
-    "format": "prettier --write app tests .github README.md package.json tsconfig.json vercel.json",
-    "format:check": "prettier --check app tests .github README.md package.json tsconfig.json vercel.json"
+    "format": "prettier --write app tests scripts .github README.md package.json tsconfig.json vercel.json",
+    "format:check": "prettier --check app tests scripts .github README.md package.json tsconfig.json vercel.json"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.39",

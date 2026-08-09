@@ -39,3 +39,8 @@ yarn-error.log*
 /.wrangler/
 /outputs/
 /work/
+
+# Gemini CLI GitHub Action
+/.gemini/
+/gemini-artifacts/
+/gha-creds-*.json

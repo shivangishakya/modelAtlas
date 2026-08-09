@@ -175,3 +175,31 @@ test("keeps data, AI analysis, types, and presentation separated", async () => {
   assert.match(packageJson, /"next": "16\.3\.0"/);
   assert.doesNotMatch(packageJson, /vinext|wrangler/);
 });
+
+test("keeps the weekly cloud updater isolated and deterministic", async () => {
+  const [workflow, validator, packageJson] = await Promise.all([
+    readFile(
+      new URL("../.github/workflows/weekly-model-update.yml", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../scripts/validate-model-catalog.mjs", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../package.json", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(workflow, /schedule:/);
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /gemini-3\.6-flash/);
+  assert.match(workflow, /gemini_cli_version: "0\.54\.4"/);
+  assert.match(workflow, /secrets\.GEMINI_API_KEY/);
+  assert.match(workflow, /permissions:\n\s+contents: read/);
+  assert.match(workflow, /permissions:\n\s+contents: write/);
+  assert.match(workflow, /Enforce the agent file boundary/);
+  assert.match(workflow, /git add app\/model-atlas\/catalog\.ts/);
+  assert.doesNotMatch(workflow, /git add -A|git add \./);
+  assert.match(validator, /must remain literal data/);
+  assert.match(validator, /Only identifier and string-literal property names/);
+  assert.match(packageJson, /"catalog:validate":/);
+});
