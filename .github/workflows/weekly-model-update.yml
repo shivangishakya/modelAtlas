@@ -10,6 +10,11 @@ on:
         required: true
         default: false
         type: boolean
+      smoke_test:
+        description: Check Gemini access only; do not research, edit, or deploy
+        required: true
+        default: false
+        type: boolean
 
 permissions: {}
 
@@ -18,8 +23,43 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  smoke-test:
+    name: Verify Gemini model access
+    if: github.event_name == 'workflow_dispatch' && inputs.smoke_test == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    steps:
+      - name: Run a no-tool Gemini health check
+        uses: google-github-actions/run-gemini-cli@f77273f4c914e4bf38440cf36a0369cb64a37489
+        env:
+          GEMINI_CLI_TRUST_WORKSPACE: "true"
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          gemini_cli_version: "0.54.4"
+          gemini_debug: "true"
+          gemini_model: gemini-3.6-flash
+          upload_artifacts: "false"
+          settings: |-
+            {
+              "model": {
+                "maxSessionTurns": 2
+              },
+              "telemetry": {
+                "enabled": false
+              },
+              "tools": {
+                "core": []
+              }
+            }
+          prompt: Reply with exactly MODEL_ATLAS_GEMINI_READY. Do not use tools.
+
   research:
     name: Research and validate catalog updates
+    if: github.event_name == 'schedule' || inputs.smoke_test != true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
