@@ -177,9 +177,13 @@ test("keeps data, AI analysis, types, and presentation separated", async () => {
 });
 
 test("keeps the weekly cloud updater isolated and deterministic", async () => {
-  const [workflow, validator, packageJson] = await Promise.all([
+  const [workflow, updater, validator, packageJson] = await Promise.all([
     readFile(
       new URL("../.github/workflows/weekly-model-update.yml", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../scripts/update-model-catalog.mjs", import.meta.url),
       "utf8",
     ),
     readFile(
@@ -191,14 +195,20 @@ test("keeps the weekly cloud updater isolated and deterministic", async () => {
 
   assert.match(workflow, /schedule:/);
   assert.match(workflow, /workflow_dispatch:/);
-  assert.match(workflow, /gemini-3\.6-flash/);
-  assert.match(workflow, /gemini_cli_version: "0\.54\.4"/);
   assert.match(workflow, /secrets\.GEMINI_API_KEY/);
+  assert.match(workflow, /node scripts\/update-model-catalog\.mjs/);
   assert.match(workflow, /permissions:\n\s+contents: read/);
   assert.match(workflow, /permissions:\n\s+contents: write/);
   assert.match(workflow, /Enforce the agent file boundary/);
   assert.match(workflow, /git add app\/model-atlas\/catalog\.ts/);
   assert.doesNotMatch(workflow, /git add -A|git add \./);
+  assert.doesNotMatch(workflow, /google_web_search|web_fetch/);
+  assert.match(updater, /gemini-3\.6-flash/);
+  assert.match(updater, /generativelanguage\.googleapis\.com/);
+  assert.match(updater, /responseFormat/);
+  assert.match(updater, /officialSources/);
+  assert.match(updater, /sourceLookbackDays = 14/);
+  assert.match(updater, /writeFile\(catalogUrl/);
   assert.match(validator, /must remain literal data/);
   assert.match(validator, /Only identifier and string-literal property names/);
   assert.match(packageJson, /"catalog:validate":/);

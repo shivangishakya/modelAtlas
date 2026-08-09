@@ -109,11 +109,16 @@ first-party source when available. Update domain metadata in
 
 The `Weekly model catalog update` GitHub Actions workflow also checks official
 provider sources every Monday from a GitHub-hosted runner, so the laptop does
-not need to be on. Gemini runs in a read-only research job with no deployment
-credentials and may modify only `app/model-atlas/catalog.ts`. A separate job
-accepts only a literal-data catalog patch, reruns all checks, commits as Shivangi
-Shakya, and deploys the validated result through Vercel. Manual runs are dry by
-default; scheduled runs publish only when a verified catalog change exists.
+not need to be on. Trusted code downloads bounded snapshots from the official
+release channels for all 16 catalog providers, then sends those snapshots and
+the current catalog to Gemini 3.6 Flash in one structured API request. This
+avoids paid search grounding and stays compatible with the free API quota.
+Gemini runs in a read-only research job with no deployment credentials and may
+modify only `app/model-atlas/catalog.ts`. A separate job accepts only a
+literal-data catalog patch, reruns all checks, commits as Shivangi Shakya, and
+deploys the validated result through Vercel. Manual runs are dry by default;
+scheduled runs publish only when a verified catalog change exists. A manual
+smoke-test option checks the model connection without researching or editing.
 
 The workflow requires the Google AI Studio key in the encrypted repository
 secret `GEMINI_API_KEY`. Its validation script is available through
