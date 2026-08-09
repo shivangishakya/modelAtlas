@@ -24,17 +24,17 @@ export const advisorRequestSchema = z.object({
 });
 
 const advisorOutputSchema = z.object({
-  taskSummary: z.string().max(240),
+  taskSummary: z.string().min(1),
   inferredDomain: z.enum(domainIds),
   confidence: z.enum(["high", "medium", "low"]),
-  assumptions: z.array(z.string()).max(3),
+  assumptions: z.array(z.string()),
   recommendations: z
     .array(
       z.object({
         modelId: z.enum(modelIds),
-        fitScore: z.number().min(0).max(100),
-        reasons: z.array(z.string().max(180)).min(2).max(3),
-        tradeoffs: z.array(z.string().max(180)).min(1).max(2),
+        fitScore: z.number(),
+        reasons: z.array(z.string()).min(2).max(3),
+        tradeoffs: z.array(z.string()).min(1).max(2),
       }),
     )
     .length(3),
@@ -48,6 +48,36 @@ class AdvisorOutputValidationError extends Error {
     super(message);
     this.name = "AdvisorOutputValidationError";
   }
+}
+
+function truncateAtWord(value: string, maxLength: number): string {
+  if (value.length <= maxLength) return value;
+
+  const shortened = value.slice(0, maxLength - 1);
+  const lastSpace = shortened.lastIndexOf(" ");
+  const boundary = lastSpace >= Math.floor(maxLength * 0.7) ? lastSpace : -1;
+
+  return `${shortened.slice(0, boundary === -1 ? undefined : boundary).trimEnd()}…`;
+}
+
+function normalizeAdvisorOutput(output: AdvisorOutput): AdvisorOutput {
+  return {
+    ...output,
+    taskSummary: truncateAtWord(output.taskSummary, 240),
+    assumptions: output.assumptions
+      .slice(0, 3)
+      .map((assumption) => truncateAtWord(assumption, 180)),
+    recommendations: output.recommendations.map((recommendation) => ({
+      ...recommendation,
+      fitScore: Math.min(100, Math.max(0, recommendation.fitScore)),
+      reasons: recommendation.reasons.map((reason) =>
+        truncateAtWord(reason, 180),
+      ),
+      tradeoffs: recommendation.tradeoffs.map((tradeoff) =>
+        truncateAtWord(tradeoff, 180),
+      ),
+    })),
+  };
 }
 
 const catalogForAnalysis = models.map((model) => ({
@@ -133,13 +163,14 @@ async function generateAdvisorOutput(
         maxOutputTokens: 4_096,
         providerOptions: {
           google: {
-            thinkingConfig: { thinkingLevel: "high" },
+            thinkingConfig: { thinkingLevel: "medium" },
           } satisfies GoogleLanguageModelOptions,
         },
       });
 
-      assertValidOutput(output);
-      return output;
+      const normalizedOutput = normalizeAdvisorOutput(output);
+      assertValidOutput(normalizedOutput);
+      return normalizedOutput;
     } catch (error) {
       if (
         attempt === MAX_ADVISOR_GENERATION_ATTEMPTS ||

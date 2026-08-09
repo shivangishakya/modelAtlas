@@ -157,6 +157,8 @@ test("keeps data, AI analysis, types, and presentation separated", async () => {
   assert.match(advisor, /model: google\(ADVISOR_MODEL_ID\)/);
   assert.match(advisor, /Output\.object/);
   assert.match(advisor, /assertValidOutput/);
+  assert.match(advisor, /normalizeAdvisorOutput/);
+  assert.match(advisor, /truncateAtWord/);
   assert.match(advisor, /MAX_ADVISOR_GENERATION_ATTEMPTS = 2/);
   assert.match(advisor, /NoObjectGeneratedError\.isInstance/);
   assert.match(advisorRoute, /advisorRequestSchema\.safeParse/);
