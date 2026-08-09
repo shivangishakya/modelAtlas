@@ -356,7 +356,7 @@ async function callGemini(prompt, schema) {
         maxOutputTokens: 65_536,
         responseFormat: {
           text: {
-            mimeType: "application/json",
+            mimeType: "APPLICATION_JSON",
             schema,
           },
         },
