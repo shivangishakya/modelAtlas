@@ -32,7 +32,7 @@ jobs:
       contents: read
 
     steps:
-      - name: Run a no-tool Gemini health check
+      - name: Run a one-search Gemini health check
         uses: google-github-actions/run-gemini-cli@f77273f4c914e4bf38440cf36a0369cb64a37489
         env:
           GEMINI_CLI_TRUST_WORKSPACE: "true"
@@ -46,16 +46,18 @@ jobs:
           settings: |-
             {
               "model": {
-                "maxSessionTurns": 2
+                "maxSessionTurns": 4
               },
               "telemetry": {
                 "enabled": false
               },
               "tools": {
-                "core": []
+                "core": ["google_web_search"]
               }
             }
-          prompt: Reply with exactly MODEL_ATLAS_GEMINI_READY. Do not use tools.
+          prompt: |-
+            Use google_web_search exactly once to find the official Google Gemini API release notes.
+            Then reply with MODEL_ATLAS_SEARCH_READY and the official URL. Do not fetch pages or use any other tool.
 
   research:
     name: Research and validate catalog updates
