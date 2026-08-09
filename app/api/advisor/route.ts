@@ -1,4 +1,4 @@
-import { APICallError, NoObjectGeneratedError } from "ai";
+import { APICallError, LoadAPIKeyError, NoObjectGeneratedError } from "ai";
 import {
   analyzeUseCase,
   advisorRequestSchema,
@@ -77,6 +77,13 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
+  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    return errorResponse(
+      "The AI advisor is not configured for this deployment. The site owner must add the Gemini API key.",
+      503,
+    );
+  }
+
   try {
     const result = await analyzeUseCase(parsedRequest.data);
     return Response.json(result, {
@@ -85,9 +92,13 @@ export async function POST(request: Request): Promise<Response> {
   } catch (error) {
     const statusCode = getStatusCode(error);
 
-    if (statusCode === 401 || statusCode === 403) {
+    if (
+      LoadAPIKeyError.isInstance(error) ||
+      statusCode === 401 ||
+      statusCode === 403
+    ) {
       return errorResponse(
-        "The AI advisor is not enabled for this deployment. The site owner must activate AI Gateway.",
+        "The AI advisor is not configured for this deployment. The site owner must add the Gemini API key.",
         503,
       );
     }

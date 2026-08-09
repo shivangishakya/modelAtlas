@@ -46,8 +46,8 @@ tests/
 ```
 
 The application keeps editorial data, server-side semantic analysis, shared
-types, and interactive presentation separate. User text and AI Gateway
-credentials are never placed in the client bundle.
+types, and interactive presentation separate. User text and the Gemini API key
+are never placed in the client bundle.
 
 ## Local development
 
@@ -58,13 +58,13 @@ credentials are never placed in the client bundle.
 
 ```bash
 npm ci
-npx vercel env pull .env.local --yes
+cp .env.example .env.local
 npm run dev
 ```
 
-The Vercel environment pull supplies the short-lived OIDC credential used by AI
-Gateway. Alternatively, set `AI_GATEWAY_API_KEY` in `.env.local`. Then open the
-local URL printed by Next.js.
+Add a free Google AI Studio key to `GOOGLE_GENERATIVE_AI_API_KEY` in
+`.env.local`, then open the local URL printed by Next.js. Never commit the real
+key.
 
 ## Quality checks
 
@@ -81,8 +81,8 @@ rendered application.
 
 The advisor uses a server-side LLM rather than substring or keyword matching:
 
-1. GPT-5.6 Sol analyzes the complete task, inputs, output, constraints and
-   ambiguity through Vercel AI Gateway.
+1. Gemini 3.6 Flash analyzes the complete task, inputs, output, constraints and
+   ambiguity with high reasoning depth.
 2. The prompt supplies only the reviewed Model Atlas catalog and requires three
    distinct catalog model IDs.
 3. A Zod schema validates the domain, confidence, scores, reasons and tradeoffs;
@@ -120,8 +120,11 @@ Next.js application.
   secrets.
 - No application authentication or deployment password is required to visit the
   production URL.
-- The advisor authenticates server-to-server with Vercel OIDC; no provider key
-  is exposed to visitors.
+- The advisor calls Gemini only from the server, using the
+  `GOOGLE_GENERATIVE_AI_API_KEY` Vercel environment variable; the key is never
+  exposed to visitors.
+- Gemini's free tier has usage limits and may use submitted content to improve
+  Google products. The UI warns visitors not to submit sensitive information.
 
 Vercel configuration lives in `vercel.json`, and the CI definition lives in
 `.github/workflows/ci.yml`.

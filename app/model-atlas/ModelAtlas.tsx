@@ -222,7 +222,7 @@ export default function ModelAtlas() {
               <span>{isAnalyzing ? "◌" : "→"}</span>
             </button>
             <p>
-              Your description is sent to GPT-5.6 Sol for analysis. Avoid
+              Your description is sent to Gemini 3.6 Flash for analysis. Avoid
               personal, privileged or confidential data.
             </p>
           </div>

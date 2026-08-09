@@ -1,13 +1,14 @@
 import "server-only";
 
+import { google, type GoogleLanguageModelOptions } from "@ai-sdk/google";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { models } from "./catalog";
 import { domains, priorityDefs } from "./domains";
 import type { AdvisorResponse } from "./types";
 
-export const ADVISOR_MODEL_ID = "openai/gpt-5.6-sol";
-export const ADVISOR_MODEL_NAME = "GPT-5.6 Sol";
+export const ADVISOR_MODEL_ID = "gemini-3.6-flash";
+export const ADVISOR_MODEL_NAME = "Gemini 3.6 Flash";
 
 const modelIds = models.map((model) => model.id) as [string, ...string[]];
 const domainIds = domains.map((domain) => domain.id) as [string, ...string[]];
@@ -114,7 +115,7 @@ export async function analyzeUseCase(
   request: AdvisorRequest,
 ): Promise<AdvisorResponse> {
   const { output } = await generateText({
-    model: ADVISOR_MODEL_ID,
+    model: google(ADVISOR_MODEL_ID),
     output: Output.object({
       name: "model_recommendation",
       description:
@@ -128,11 +129,11 @@ export async function analyzeUseCase(
       domains: domainForAnalysis,
       modelCatalog: catalogForAnalysis,
     }),
-    maxOutputTokens: 1_600,
+    maxOutputTokens: 4_096,
     providerOptions: {
-      gateway: {
-        tags: ["model-atlas", "semantic-advisor"],
-      },
+      google: {
+        thinkingConfig: { thinkingLevel: "high" },
+      } satisfies GoogleLanguageModelOptions,
     },
   });
 

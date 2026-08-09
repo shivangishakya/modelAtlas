@@ -41,7 +41,11 @@ before(async () => {
     ],
     {
       cwd: new URL("../", import.meta.url),
-      env: { ...process.env, NODE_ENV: "production" },
+      env: {
+        ...process.env,
+        NODE_ENV: "production",
+        GOOGLE_GENERATIVE_AI_API_KEY: "",
+      },
       stdio: ["ignore", "pipe", "pipe"],
     },
   );
@@ -89,6 +93,24 @@ test("validates advisor input before making an AI request", async () => {
   });
 });
 
+test("reports a missing Gemini key without attempting generation", async () => {
+  const response = await fetch(`${baseUrl}/api/advisor`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      description:
+        "Compare architectural drawings with a specification and draft RFIs.",
+      priorities: ["vision", "long"],
+    }),
+  });
+
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), {
+    error:
+      "The AI advisor is not configured for this deployment. The site owner must add the Gemini API key.",
+  });
+});
+
 test("keeps data, AI analysis, types, and presentation separated", async () => {
   const [
     page,
@@ -130,7 +152,9 @@ test("keeps data, AI analysis, types, and presentation separated", async () => {
   assert.match(catalog, /export const models: readonly Model\[\]/);
   assert.match(domains, /export const domains: readonly Domain\[\]/);
   assert.match(advisor, /import "server-only"/);
-  assert.match(advisor, /model: ADVISOR_MODEL_ID/);
+  assert.match(advisor, /from "@ai-sdk\/google"/);
+  assert.match(advisor, /gemini-3\.6-flash/);
+  assert.match(advisor, /model: google\(ADVISOR_MODEL_ID\)/);
   assert.match(advisor, /Output\.object/);
   assert.match(advisor, /assertValidOutput/);
   assert.match(advisorRoute, /advisorRequestSchema\.safeParse/);
@@ -141,6 +165,7 @@ test("keeps data, AI analysis, types, and presentation separated", async () => {
   assert.match(types, /export interface AdvisorResponse/);
   assert.match(types, /export interface Recommendation/);
   assert.match(packageJson, /"name": "model-atlas"/);
+  assert.match(packageJson, /"@ai-sdk\/google":/);
   assert.match(packageJson, /"ai":/);
   assert.match(packageJson, /"zod":/);
   assert.match(packageJson, /"next": "16\.3\.0"/);
