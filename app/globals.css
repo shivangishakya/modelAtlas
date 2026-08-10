@@ -853,8 +853,10 @@ footer a {
 }
 .advisor-input textarea {
   width: 100%;
-  min-height: 176px;
+  min-height: 240px;
+  max-height: 560px;
   resize: vertical;
+  overflow: auto;
   border: 0;
   border-bottom: 1px solid var(--line);
   background: transparent;
@@ -864,12 +866,45 @@ footer a {
   line-height: 1.42;
   padding: 4px 0 18px;
   outline: none;
+  user-select: text;
+  -webkit-user-select: text;
 }
 .advisor-input textarea:focus {
   border-color: var(--ink);
 }
 .advisor-input textarea::placeholder {
   color: #a7aaa2;
+}
+.clipboard-actions {
+  min-height: 31px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-top: 9px;
+}
+.clipboard-actions button {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 5px 9px;
+}
+.clipboard-actions button:hover:not(:disabled),
+.clipboard-actions button:focus-visible {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+.clipboard-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+.clipboard-actions span {
+  color: var(--muted);
+  font-size: 10px;
+  margin-left: 4px;
 }
 .charhint {
   display: flex;
@@ -1320,6 +1355,15 @@ footer a {
   }
   .advisor-input textarea {
     font-size: 19px;
+    min-height: 280px;
+  }
+  .clipboard-actions {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .clipboard-actions span {
+    flex-basis: 100%;
+    margin-left: 0;
   }
   .rec-head {
     padding: 22px;

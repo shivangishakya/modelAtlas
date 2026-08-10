@@ -1,6 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import {
+  MAX_ADVISOR_DESCRIPTION_LENGTH,
+  MIN_ADVISOR_DESCRIPTION_LENGTH,
+} from "./advisor-config";
 import { independent, models } from "./catalog";
 import { caution, domains, presets, priorityDefs } from "./domains";
 import { scoreFor } from "./recommendation";
@@ -22,10 +26,12 @@ export default function ModelAtlas() {
     "gemini",
   ]);
   const [useText, setUseText] = useState("");
+  const [clipboardStatus, setClipboardStatus] = useState("");
   const [priorities, setPriorities] = useState<string[]>([]);
   const [results, setResults] = useState<AdvisorResponse | null>(null);
   const [advisorError, setAdvisorError] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const useCaseInputRef = useRef<HTMLTextAreaElement>(null);
   const current = domains.find((d) => d.id === domain)!;
   const ranked = useMemo(
     () => [...models].sort((a, b) => scoreFor(b, domain) - scoreFor(a, domain)),
@@ -46,9 +52,83 @@ export default function ModelAtlas() {
           ? [...s, id]
           : s,
     );
+
+  const restoreSelection = (start: number, end = start) => {
+    window.requestAnimationFrame(() => {
+      useCaseInputRef.current?.focus();
+      useCaseInputRef.current?.setSelectionRange(start, end);
+    });
+  };
+
+  const copyOrCutDescription = async (cut: boolean) => {
+    const input = useCaseInputRef.current;
+    if (!input || !useText) return;
+
+    const selectionStart = input.selectionStart;
+    const selectionEnd = input.selectionEnd;
+    const hasSelection = selectionEnd > selectionStart;
+    const clipboardText = hasSelection
+      ? useText.slice(selectionStart, selectionEnd)
+      : useText;
+
+    try {
+      await navigator.clipboard.writeText(clipboardText);
+
+      if (cut) {
+        const nextValue = hasSelection
+          ? `${useText.slice(0, selectionStart)}${useText.slice(selectionEnd)}`
+          : "";
+        setUseText(nextValue);
+        restoreSelection(hasSelection ? selectionStart : 0);
+      }
+
+      setClipboardStatus(
+        `${hasSelection ? "Selected text" : "Description"} ${cut ? "cut" : "copied"}.`,
+      );
+    } catch {
+      setClipboardStatus(
+        "Clipboard access was blocked. Use your browser's Cut or Copy command.",
+      );
+      input.focus();
+    }
+  };
+
+  const pasteDescription = async () => {
+    const input = useCaseInputRef.current;
+    if (!input) return;
+
+    try {
+      const clipboardText = await navigator.clipboard.readText();
+      const selectionStart = input.selectionStart;
+      const selectionEnd = input.selectionEnd;
+      const availableCharacters =
+        MAX_ADVISOR_DESCRIPTION_LENGTH -
+        (useText.length - (selectionEnd - selectionStart));
+      const acceptedText = clipboardText.slice(
+        0,
+        Math.max(0, availableCharacters),
+      );
+      const nextValue = `${useText.slice(0, selectionStart)}${acceptedText}${useText.slice(selectionEnd)}`;
+
+      setUseText(nextValue);
+      restoreSelection(selectionStart + acceptedText.length);
+      setClipboardStatus(
+        acceptedText.length < clipboardText.length
+          ? `Pasted up to the ${MAX_ADVISOR_DESCRIPTION_LENGTH.toLocaleString()}-character limit.`
+          : "Text pasted.",
+      );
+    } catch {
+      setClipboardStatus(
+        "Clipboard access was blocked. Use your browser's Paste command.",
+      );
+      input.focus();
+    }
+  };
+
   const runAdvisor = async () => {
     const description = useText.trim();
-    if (description.length < 20 || isAnalyzing) return;
+    if (description.length < MIN_ADVISOR_DESCRIPTION_LENGTH || isAnalyzing)
+      return;
 
     setIsAnalyzing(true);
     setAdvisorError("");
@@ -172,14 +252,51 @@ export default function ModelAtlas() {
             <label htmlFor="usecase">DESCRIBE THE WORK</label>
             <textarea
               id="usecase"
+              ref={useCaseInputRef}
+              name="usecase"
               value={useText}
-              onChange={(e) => setUseText(e.target.value)}
-              maxLength={2_000}
+              onChange={(event) => {
+                setUseText(event.target.value);
+                setClipboardStatus("");
+              }}
+              maxLength={MAX_ADVISOR_DESCRIPTION_LENGTH}
+              rows={8}
+              aria-describedby="usecase-guidance usecase-count clipboard-status"
               placeholder="Example: I need to compare architectural drawings against a 300-page specification, identify conflicts, and draft RFIs. The documents are confidential…"
             />
+            <div
+              className="clipboard-actions"
+              aria-label="Text editing actions"
+            >
+              <button
+                type="button"
+                onClick={() => copyOrCutDescription(false)}
+                disabled={!useText}
+              >
+                Copy
+              </button>
+              <button
+                type="button"
+                onClick={() => copyOrCutDescription(true)}
+                disabled={!useText}
+              >
+                Cut
+              </button>
+              <button type="button" onClick={pasteDescription}>
+                Paste
+              </button>
+              <span id="clipboard-status" role="status" aria-live="polite">
+                {clipboardStatus}
+              </span>
+            </div>
             <div className="charhint">
-              <span>Be specific about inputs, output, privacy and budget.</span>
-              <b>{useText.length} chars</b>
+              <span id="usecase-guidance">
+                Be specific about inputs, output, privacy and budget.
+              </span>
+              <b id="usecase-count">
+                {useText.length.toLocaleString()} /{" "}
+                {MAX_ADVISOR_DESCRIPTION_LENGTH.toLocaleString()} chars
+              </b>
             </div>
             <span className="mini-label">TRY AN EXAMPLE</span>
             <div className="preset-row">
@@ -212,7 +329,10 @@ export default function ModelAtlas() {
             </div>
             <button
               className="analyze"
-              disabled={useText.trim().length < 20 || isAnalyzing}
+              disabled={
+                useText.trim().length < MIN_ADVISOR_DESCRIPTION_LENGTH ||
+                isAnalyzing
+              }
               onClick={runAdvisor}
               aria-busy={isAnalyzing}
             >

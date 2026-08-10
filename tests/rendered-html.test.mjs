@@ -75,6 +75,11 @@ test("serves the production Model Atlas application", async () => {
   assert.match(html, /id="compare"/);
   assert.match(html, /researched models/);
   assert.match(html, /Evidence-led AI field guide/);
+  assert.match(html, /maxlength="20000"/);
+  assert.match(html, />Copy</);
+  assert.match(html, />Cut</);
+  assert.match(html, />Paste</);
+  assert.match(html, /20,000<!-- --> chars/);
   assert.doesNotMatch(html, /codex-preview|Building your site/);
 });
 
@@ -89,7 +94,24 @@ test("validates advisor input before making an AI request", async () => {
   assert.equal(response.headers.get("cache-control"), "no-store");
   assert.deepEqual(await response.json(), {
     error:
-      "Describe the work in 20–2,000 characters and use only the listed priorities.",
+      "Describe the work in 20–20,000 characters and use only the listed priorities.",
+  });
+});
+
+test("accepts long advisor descriptions", async () => {
+  const response = await fetch(`${baseUrl}/api/advisor`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      description: "Detailed project requirement. ".repeat(200),
+      priorities: ["quality"],
+    }),
+  });
+
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), {
+    error:
+      "The AI advisor is not configured for this deployment. The site owner must add the Gemini API key.",
   });
 });
 

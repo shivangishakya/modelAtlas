@@ -3,6 +3,11 @@ import {
   analyzeUseCase,
   advisorRequestSchema,
 } from "../../model-atlas/advisor";
+import {
+  MAX_ADVISOR_DESCRIPTION_LENGTH,
+  MAX_ADVISOR_REQUEST_BYTES,
+  MIN_ADVISOR_DESCRIPTION_LENGTH,
+} from "../../model-atlas/advisor-config";
 
 export const maxDuration = 60;
 
@@ -58,7 +63,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const contentLength = Number(request.headers.get("content-length") ?? 0);
-  if (contentLength > 8_000) {
+  if (contentLength > MAX_ADVISOR_REQUEST_BYTES) {
     return errorResponse("The advisor request is too large.", 413);
   }
 
@@ -72,7 +77,7 @@ export async function POST(request: Request): Promise<Response> {
   const parsedRequest = advisorRequestSchema.safeParse(body);
   if (!parsedRequest.success) {
     return errorResponse(
-      "Describe the work in 20–2,000 characters and use only the listed priorities.",
+      `Describe the work in ${MIN_ADVISOR_DESCRIPTION_LENGTH}–${MAX_ADVISOR_DESCRIPTION_LENGTH.toLocaleString()} characters and use only the listed priorities.`,
       400,
     );
   }

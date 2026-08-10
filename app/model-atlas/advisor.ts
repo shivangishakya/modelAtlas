@@ -3,6 +3,10 @@ import "server-only";
 import { google, type GoogleLanguageModelOptions } from "@ai-sdk/google";
 import { generateText, NoObjectGeneratedError, Output } from "ai";
 import { z } from "zod";
+import {
+  MAX_ADVISOR_DESCRIPTION_LENGTH,
+  MIN_ADVISOR_DESCRIPTION_LENGTH,
+} from "./advisor-config";
 import { models } from "./catalog";
 import { domains, priorityDefs } from "./domains";
 import type { AdvisorResponse } from "./types";
@@ -19,7 +23,11 @@ const priorityIds = priorityDefs.map((priority) => priority.id) as [
 const MAX_ADVISOR_GENERATION_ATTEMPTS = 2;
 
 export const advisorRequestSchema = z.object({
-  description: z.string().trim().min(20).max(2_000),
+  description: z
+    .string()
+    .trim()
+    .min(MIN_ADVISOR_DESCRIPTION_LENGTH)
+    .max(MAX_ADVISOR_DESCRIPTION_LENGTH),
   priorities: z.array(z.enum(priorityIds)).max(priorityDefs.length),
 });
 
