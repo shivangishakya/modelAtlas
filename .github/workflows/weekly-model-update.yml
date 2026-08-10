@@ -1,4 +1,4 @@
-name: Weekly model catalog update
+name: Weekly Model Atlas update
 
 on:
   schedule:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: Commit and deploy verified catalog changes
+        description: Commit and deploy verified model and domain changes
         required: true
         default: false
         type: boolean
@@ -19,7 +19,7 @@ on:
 permissions: {}
 
 concurrency:
-  group: weekly-model-catalog-update
+  group: weekly-model-atlas-update
   cancel-in-progress: false
 
 jobs:
@@ -48,7 +48,7 @@ jobs:
         run: node scripts/update-model-catalog.mjs --smoke
 
   research:
-    name: Research and validate catalog updates
+    name: Research and validate model and domain updates
     if: github.event_name == 'schedule' || inputs.smoke_test != true
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -84,29 +84,29 @@ jobs:
 
           if [[ ! -s /tmp/model-atlas-changed-files ]]; then
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
-            echo "No verified catalog changes were produced."
+            echo "No verified model or Domain Map changes were produced."
             exit 0
           fi
 
-          if grep -Fxv "app/model-atlas/catalog.ts" /tmp/model-atlas-changed-files; then
-            echo "Gemini attempted to modify a file outside the catalog boundary." >&2
+          if grep -Ev '^app/model-atlas/(catalog|domains)\.ts$' /tmp/model-atlas-changed-files; then
+            echo "Gemini attempted to modify a file outside the reviewed data boundary." >&2
             exit 1
           fi
 
           echo "has_changes=true" >> "$GITHUB_OUTPUT"
-          echo "Validated changed-file boundary: app/model-atlas/catalog.ts"
+          echo "Validated changed-file boundary for Model Atlas data."
 
       - name: Install dependencies
         if: steps.scope.outputs.has_changes == 'true'
         run: npm ci
 
-      - name: Format the candidate catalog
+      - name: Format the candidate data
         if: steps.scope.outputs.has_changes == 'true'
-        run: npx prettier --write app/model-atlas/catalog.ts
+        run: npx prettier --write app/model-atlas/catalog.ts app/model-atlas/domains.ts
 
-      - name: Validate literal catalog data
+      - name: Validate literal catalog and Domain Map data
         if: steps.scope.outputs.has_changes == 'true'
-        run: npm run catalog:validate
+        run: npm run atlas:validate
 
       - name: Run complete project checks
         if: steps.scope.outputs.has_changes == 'true'
@@ -116,16 +116,16 @@ jobs:
           npm test
           git diff --check
 
-      - name: Create the validated catalog patch
+      - name: Create the validated Model Atlas patch
         if: steps.scope.outputs.has_changes == 'true'
-        run: git diff --binary -- app/model-atlas/catalog.ts > model-catalog.patch
+        run: git diff --binary -- app/model-atlas/catalog.ts app/model-atlas/domains.ts > model-atlas.patch
 
       - name: Preserve the validated patch
         if: steps.scope.outputs.has_changes == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: validated-model-catalog-patch
-          path: model-catalog.patch
+          name: validated-model-atlas-patch
+          path: model-atlas.patch
           if-no-files-found: error
           retention-days: 7
 
@@ -149,13 +149,13 @@ jobs:
       - name: Download the validated patch
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
-          name: validated-model-catalog-patch
+          name: validated-model-atlas-patch
           path: ${{ runner.temp }}/model-atlas-patch
 
       - name: Apply the validated patch
         run: |-
-          git apply --check "$RUNNER_TEMP/model-atlas-patch/model-catalog.patch"
-          git apply "$RUNNER_TEMP/model-atlas-patch/model-catalog.patch"
+          git apply --check "$RUNNER_TEMP/model-atlas-patch/model-atlas.patch"
+          git apply "$RUNNER_TEMP/model-atlas-patch/model-atlas.patch"
 
       - name: Use Node.js 22
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -166,9 +166,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Revalidate the isolated catalog change
+      - name: Revalidate the isolated data change
         run: |-
-          npm run catalog:validate
+          npm run atlas:validate
           npm run format:check
           npm run lint
           npm test
@@ -178,8 +178,8 @@ jobs:
         run: |-
           git config user.name "Shivangi Shakya"
           git config user.email "shivangi11061993@gmail.com"
-          git add app/model-atlas/catalog.ts
-          git commit -m "chore: refresh AI model catalog"
+          git add app/model-atlas/catalog.ts app/model-atlas/domains.ts
+          git commit -m "chore: refresh AI model and domain data"
           git push origin HEAD:main
 
       - name: Install pinned Vercel CLI

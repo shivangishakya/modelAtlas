@@ -173,6 +173,8 @@ test("keeps data, AI analysis, types, and presentation separated", async () => {
   assert.doesNotMatch(component, /const models\s*=/);
   assert.match(catalog, /export const models: readonly Model\[\]/);
   assert.match(domains, /export const domains: readonly Domain\[\]/);
+  assert.match(domains, /export const domainLeaders/);
+  assert.match(domains, /export const domainSignals/);
   assert.match(advisor, /import "server-only"/);
   assert.match(advisor, /from "@ai-sdk\/google"/);
   assert.match(advisor, /gemini-3\.6-flash/);
@@ -187,6 +189,7 @@ test("keeps data, AI analysis, types, and presentation separated", async () => {
   assert.match(advisorRoute, /Cache-Control": "no-store"/);
   assert.doesNotMatch(recommendation, /inferDomain|getRecommendations/);
   assert.doesNotMatch(recommendation, /"use client"/);
+  assert.match(recommendation, /from "\.\/domains"/);
   assert.match(types, /export interface Model/);
   assert.match(types, /export interface AdvisorResponse/);
   assert.match(types, /export interface Recommendation/);
@@ -199,21 +202,29 @@ test("keeps data, AI analysis, types, and presentation separated", async () => {
 });
 
 test("keeps the weekly cloud updater isolated and deterministic", async () => {
-  const [workflow, updater, validator, packageJson] = await Promise.all([
-    readFile(
-      new URL("../.github/workflows/weekly-model-update.yml", import.meta.url),
-      "utf8",
-    ),
-    readFile(
-      new URL("../scripts/update-model-catalog.mjs", import.meta.url),
-      "utf8",
-    ),
-    readFile(
-      new URL("../scripts/validate-model-catalog.mjs", import.meta.url),
-      "utf8",
-    ),
-    readFile(new URL("../package.json", import.meta.url), "utf8"),
-  ]);
+  const [workflow, updater, catalogValidator, domainValidator, packageJson] =
+    await Promise.all([
+      readFile(
+        new URL(
+          "../.github/workflows/weekly-model-update.yml",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+      readFile(
+        new URL("../scripts/update-model-catalog.mjs", import.meta.url),
+        "utf8",
+      ),
+      readFile(
+        new URL("../scripts/validate-model-catalog.mjs", import.meta.url),
+        "utf8",
+      ),
+      readFile(
+        new URL("../scripts/validate-domain-map.mjs", import.meta.url),
+        "utf8",
+      ),
+      readFile(new URL("../package.json", import.meta.url), "utf8"),
+    ]);
 
   assert.match(workflow, /schedule:/);
   assert.match(workflow, /workflow_dispatch:/);
@@ -222,7 +233,10 @@ test("keeps the weekly cloud updater isolated and deterministic", async () => {
   assert.match(workflow, /permissions:\n\s+contents: read/);
   assert.match(workflow, /permissions:\n\s+contents: write/);
   assert.match(workflow, /Enforce the agent file boundary/);
-  assert.match(workflow, /git add app\/model-atlas\/catalog\.ts/);
+  assert.match(
+    workflow,
+    /git add app\/model-atlas\/catalog\.ts app\/model-atlas\/domains\.ts/,
+  );
   assert.doesNotMatch(workflow, /git add -A|git add \./);
   assert.doesNotMatch(workflow, /google_web_search|web_fetch/);
   assert.match(updater, /gemini-3\.6-flash/);
@@ -231,7 +245,17 @@ test("keeps the weekly cloud updater isolated and deterministic", async () => {
   assert.match(updater, /officialSources/);
   assert.match(updater, /sourceLookbackDays = 14/);
   assert.match(updater, /writeFile\(catalogUrl/);
-  assert.match(validator, /must remain literal data/);
-  assert.match(validator, /Only identifier and string-literal property names/);
+  assert.match(updater, /writeFile\(domainsUrl/);
+  assert.match(updater, /domainMapChanged/);
+  assert.match(catalogValidator, /must remain literal data/);
+  assert.match(
+    catalogValidator,
+    /Only identifier and string-literal property names/,
+  );
+  assert.match(domainValidator, /must remain literal data/);
+  assert.match(domainValidator, /references unknown model ID/);
+  assert.match(domainValidator, /exactly one entry for every domain/);
   assert.match(packageJson, /"catalog:validate":/);
+  assert.match(packageJson, /"domain:validate":/);
+  assert.match(packageJson, /"atlas:validate":/);
 });

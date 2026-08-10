@@ -256,3 +256,39 @@ export const priorityDefs: readonly PriorityOption[] = [
   { id: "cost", label: "Lower cost" },
   { id: "multilingual", label: "Multilingual" },
 ];
+
+export const domainLeaders: Readonly<Record<string, readonly string[]>> = {
+  medical: ["fable", "gemini", "gpt", "claude", "sonnet"],
+  software: ["gpt", "fable", "claude", "sonnet", "gemini"],
+  construction: ["gemini", "gpt", "fable", "claude", "minimax"],
+  creative: ["gemini", "fable", "gpt", "sonnet", "minimax"],
+  research: ["gpt", "gemini", "fable", "claude", "sonar"],
+  finance: ["fable", "gpt", "claude", "grok", "sonar"],
+  legal: ["fable", "claude", "sonnet", "gpt"],
+  marketing: ["fable", "claude", "gemini", "sonnet"],
+  manufacturing: ["gemini", "minimax", "nova", "gpt"],
+  retail: ["gemini-flash", "gpt-luna", "sonnet", "command"],
+  energy: ["gpt", "gemini", "fable", "glm"],
+  agriculture: ["gemini", "gemini-flash", "minimax", "gemma"],
+  government: ["command", "granite", "glm", "mistral"],
+  operations: ["gpt", "sonnet", "fable", "gemini-flash"],
+  hr: ["claude", "sonnet", "command", "mistral"],
+};
+
+export const domainSignals: Readonly<Record<string, readonly string[]>> = {
+  medical: ["reasoning", "vision", "document", "research"],
+  software: ["code", "reasoning", "tools", "agent"],
+  construction: ["vision", "document", "long context", "reasoning"],
+  creative: ["creative", "vision", "video", "writing"],
+  research: ["research", "long context", "citation", "search"],
+  finance: ["financial", "reasoning", "document", "search"],
+  legal: ["legal", "document", "citation", "long context"],
+  marketing: ["creative", "vision", "video", "writing"],
+  manufacturing: ["vision", "agent", "enterprise", "construction"],
+  retail: ["fast", "high volume", "multilingual", "tools"],
+  energy: ["research", "long context", "construction", "science"],
+  agriculture: ["vision", "video", "multilingual", "research"],
+  government: ["sovereign", "open weights", "enterprise", "multilingual"],
+  operations: ["agents", "tools", "document", "enterprise"],
+  hr: ["document", "multilingual", "balanced", "enterprise"],
+};

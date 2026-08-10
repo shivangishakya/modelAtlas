@@ -7,11 +7,13 @@
     "node": ">=22.13.0"
   },
   "scripts": {
+    "atlas:validate": "npm run catalog:validate && npm run domain:validate",
     "catalog:validate": "node scripts/validate-model-catalog.mjs",
+    "domain:validate": "node scripts/validate-domain-map.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "npm run catalog:validate && npm run build && node --test tests/rendered-html.test.mjs",
+    "test": "npm run atlas:validate && npm run build && node --test tests/rendered-html.test.mjs",
     "lint": "eslint .",
     "format": "prettier --write app tests scripts .github README.md package.json tsconfig.json vercel.json",
     "format:check": "prettier --check app tests scripts .github README.md package.json tsconfig.json vercel.json"

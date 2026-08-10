@@ -98,31 +98,38 @@ run task-specific evaluations before consequential use.
 The use-case description is sent to the configured AI model for analysis. Do
 not submit personal, privileged, regulated, or confidential information.
 
-## Updating the catalog
+## Updating models and the Domain Map
 
 Add or revise models in `app/model-atlas/catalog.ts`, using the `Model` contract
 from `app/model-atlas/types.ts`. Each factual capability claim should include a
 first-party source when available. Update domain metadata in
-`app/model-atlas/domains.ts`, semantic selection policy in
-`app/model-atlas/advisor.ts`, and domain-map ranking rules in
-`app/model-atlas/recommendation.ts`.
+`app/model-atlas/domains.ts` and semantic selection policy in
+`app/model-atlas/advisor.ts`. Domain leader lists and capability signals live
+with the other validated Domain Map data in `app/model-atlas/domains.ts`.
 
-The `Weekly model catalog update` GitHub Actions workflow also checks official
-provider sources every Monday from a GitHub-hosted runner, so the laptop does
-not need to be on. Trusted code downloads bounded snapshots from the official
-release channels for all 16 catalog providers, then sends those snapshots and
-the current catalog to Gemini 3.6 Flash in one structured API request. This
-avoids paid search grounding and stays compatible with the free API quota.
-Gemini runs in a read-only research job with no deployment credentials and may
-modify only `app/model-atlas/catalog.ts`. A separate job accepts only a
-literal-data catalog patch, reruns all checks, commits as Shivangi Shakya, and
-deploys the validated result through Vercel. Manual runs are dry by default;
-scheduled runs publish only when a verified catalog change exists. A manual
-smoke-test option checks the model connection without researching or editing.
+The `Weekly Model Atlas update` GitHub Actions workflow checks official provider
+sources every Monday from a GitHub-hosted runner, so the laptop does not need to
+be on. Trusted code downloads bounded snapshots from the official release
+channels for all 16 catalog providers, then sends those snapshots, the current
+catalog and the current Domain Map to Gemini 3.6 Flash in one structured API
+request. This avoids paid search grounding and stays compatible with the free
+API quota.
+
+The updater can add or revise verified models, refresh affected domain scores,
+and update the Domain Map's evidence-led leader lists, capability signals and
+workflow areas. It preserves domain IDs and high-stakes cautions unless direct
+official evidence supports a change, and it skips ambiguous claims. Gemini runs
+in a read-only research job with no deployment credentials and may modify only
+`app/model-atlas/catalog.ts` and `app/model-atlas/domains.ts`. Separate literal-
+data validators reject executable code, invalid model references, incomplete
+domain coverage and malformed data before a publishing job commits as Shivangi
+Shakya and deploys through Vercel. Manual runs are dry by default; scheduled
+runs publish only when a verified change exists. A manual smoke-test option
+checks the model connection without researching or editing.
 
 The workflow requires the Google AI Studio key in the encrypted repository
-secret `GEMINI_API_KEY`. Its validation script is available through
-`npm run catalog:validate`.
+secret `GEMINI_API_KEY`. Complete data validation is available through
+`npm run atlas:validate`.
 
 ## Deployment
 
