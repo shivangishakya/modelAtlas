@@ -75,7 +75,7 @@ test("serves the production Model Atlas application", async () => {
   assert.match(html, /id="compare"/);
   assert.match(html, /researched models/);
   assert.match(html, /Evidence-led AI field guide/);
-  assert.match(html, /maxlength="20000"/);
+  assert.match(html, /maxLength="20000"/);
   assert.match(html, />Copy</);
   assert.match(html, />Cut</);
   assert.match(html, />Paste</);
@@ -104,7 +104,7 @@ test("accepts long advisor descriptions", async () => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       description: "Detailed project requirement. ".repeat(200),
-      priorities: ["quality"],
+      priorities: ["long"],
     }),
   });
 
